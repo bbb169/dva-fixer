@@ -61,6 +61,7 @@ export type StateTypedDispatch = TypedDispatch<AllModelStateType>;
     let stateStatement: ts.Statement = {} as ts.Statement;
     let modelObjectStatement: ts.Statement = {} as ts.Statement;
     let importDvaHelperStatement: ts.Statement = null as unknown as ts.Statement;
+    let importModelsTypeStatement: ts.Statement = null as unknown as ts.Statement;
     let effectsNames: string[] = [];
     let modelName = '';
     console.log(sourceFile);
@@ -73,6 +74,10 @@ export type StateTypedDispatch = TypedDispatch<AllModelStateType>;
         }
 
         if (item?.moduleSpecifier?.text === '@/models/type') {
+            importModelsTypeStatement = item;
+        }
+
+        if (item?.moduleSpecifier?.text === '@/utils/dva-helper' && item.importClause?.namedBindings?.elements?.every((item: any) => item.name.escapedText !== 'TypedModel')) {
             importDvaHelperStatement = item;
         }
 
@@ -159,15 +164,16 @@ export type StateTypedDispatch = TypedDispatch<AllModelStateType>;
     let headSourceCode = '';
 
     if (importDvaHelperStatement) {
+        headSourceCode = getImportClauseAddElementStr((importDvaHelperStatement as any).importClause, sourceFile, 'TypedModel', insertPosition);
+    } else {
         headSourceCode = sourceFile.text.slice(
             0,
             insertPosition,
         );
-    } else {
-        headSourceCode = `import { StatedModel } from '@/models/type';\n${sourceFile.text.slice(
-            0,
-            insertPosition,
-        )}`;
+    }
+
+    if (!importModelsTypeStatement) {
+        headSourceCode = `import { StatedModel } from '@/models/type';\n${headSourceCode}`;
     }
 
     // 修改变量model的类型Model为TypedModel
