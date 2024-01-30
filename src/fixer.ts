@@ -260,7 +260,7 @@ export type StateTypedDispatch = TypedDispatch<AllModelStateType>;
                     importEndPosition,
                 )}, ${modelTypeName}${collecterSourceFile.text.slice(
                     importEndPosition,
-                    AllModelStateTypeStatement.jsDoc[0].end + 1,
+                    AllModelStateTypeStatement.pos + 2,
                 )}${ts
                     .createPrinter()
                     .printNode(
@@ -272,7 +272,7 @@ export type StateTypedDispatch = TypedDispatch<AllModelStateType>;
                 // 将新的文本写回源文件
                 fs.writeFileSync(collecterFilePath, newCollecterSourceCode);
             } else {
-                const newCollecterSourceCode = `import { ${modelTypeName} } from 'umi';\n{collecterSourceFile.text.slice(
+                const newCollecterSourceCode = `import { ${modelTypeName} } from 'umi';\n${collecterSourceFile.text.slice(
                     0,
                     AllModelStateTypeStatement.jsDoc[0].end + 1,
                 )}${ts
