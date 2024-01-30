@@ -170,8 +170,6 @@ export type StateTypedDispatch = TypedDispatch<AllModelStateType>;
 
     // ========================= 更新公共的类型收集 =========================
     fs.readFile(collecterFilePath, 'utf-8', (err: any, collecterCode: string) => {
-        console.log('we are here');
-        debugger;
         // 使用 TypeScript API 解析代码
         const collecterSourceFile = ts.createSourceFile(
         collecterFilePath,
@@ -187,67 +185,70 @@ export type StateTypedDispatch = TypedDispatch<AllModelStateType>;
             console.warn('找不到AllModelStateType');
             return;
         }
-        const updatedAllModelStateTypeDeclaration = ts.factory.updateTypeAliasDeclaration(
-            AllModelStateTypeStatement,
-            AllModelStateTypeStatement.modifiers,
-            AllModelStateTypeStatement.name,
-            AllModelStateTypeStatement.typeParameters,
-            ts.factory.createTypeLiteralNode([
-                ...(AllModelStateTypeStatement as any).members,
-                ts.factory.createPropertySignature(
-                    undefined,
-                    ts.factory.createIdentifier(modelName),
-                    undefined,
-                    ts.factory.createTypeReferenceNode(ts.factory.createIdentifier(modelTypeName)),
-                ),
-            ]),
-        );
-        console.log(collecterSourceFile);
-        
-        const importFromUmi = collecterSourceFile.statements.find(
-        (item: any): boolean =>
-            item?.kind === 269 && item?.moduleSpecifier.text === 'umi',
-        ) as any;
-        if (importFromUmi) {
-            // 找到 importClause，这里假设 importClause 存在
-            const { importClause } = importFromUmi;
+        try {
+            const updatedAllModelStateTypeDeclaration = ts.factory.updateTypeAliasDeclaration(
+                AllModelStateTypeStatement,
+                AllModelStateTypeStatement.modifiers,
+                AllModelStateTypeStatement.name,
+                AllModelStateTypeStatement.typeParameters,
+                ts.factory.createTypeLiteralNode([
+                    ...(AllModelStateTypeStatement as any).type.members,
+                    ts.factory.createPropertySignature(
+                        undefined,
+                        ts.factory.createIdentifier(modelName),
+                        undefined,
+                        ts.factory.createTypeReferenceNode(ts.factory.createIdentifier(modelTypeName)),
+                    ),
+                ]),
+            );
+            
+            const importFromUmi = collecterSourceFile.statements.find(
+            (item: any): boolean =>
+                item?.kind === 269 && item?.moduleSpecifier.text === 'umi',
+            ) as any;
+            if (importFromUmi) {
+                // 找到 importClause，这里假设 importClause 存在
+                const { importClause } = importFromUmi;
 
-            const importElements = importClause?.namedBindings?.elements as any[];
-            if (!importElements) {
-                throw new Error('找不到importElements');
+                const importElements = importClause?.namedBindings?.elements as any[];
+                if (!importElements) {
+                    throw new Error('找不到importElements');
+                }
+                const importEndPosition = importElements[importElements.length - 1].end;
+
+                const newCollecterSourceCode = `${collecterSourceFile.text.slice(
+                    0,
+                    importEndPosition,
+                )}, ${modelTypeName}${collecterSourceFile.text.slice(
+                    importEndPosition,
+                    AllModelStateTypeStatement.jsDoc[0].end + 1,
+                )}${ts
+                    .createPrinter()
+                    .printNode(
+                    ts.EmitHint.Unspecified,
+                    updatedAllModelStateTypeDeclaration,
+                    collecterSourceFile,
+                    )}${collecterSourceFile.text.slice(AllModelStateTypeStatement.end)}`;
+
+                // 将新的文本写回源文件
+                fs.writeFileSync(collecterFilePath, newCollecterSourceCode);
+                } else {
+                const newCollecterSourceCode = `import { ${modelTypeName} } from 'umi';\n${collecterSourceFile.text.slice(
+                    0,
+                    AllModelStateTypeStatement.jsDoc[0].end + 1,
+                )}${ts
+                    .createPrinter()
+                    .printNode(
+                    ts.EmitHint.Unspecified,
+                    updatedAllModelStateTypeDeclaration,
+                    collecterSourceFile,
+                    )}${collecterSourceFile.text.slice(AllModelStateTypeStatement.end)}`;
+
+                // 将新的文本写回源文件
+                fs.writeFileSync(collecterFilePath, newCollecterSourceCode);
             }
-            const importEndPosition = importElements[importElements.length - 1].end;
-
-            const newCollecterSourceCode = `${collecterSourceFile.text.slice(
-                0,
-                importEndPosition,
-            )}, ${modelTypeName}${collecterSourceFile.text.slice(
-                importEndPosition,
-                AllModelStateTypeStatement.jsDoc[0].end + 1,
-            )}${ts
-                .createPrinter()
-                .printNode(
-                ts.EmitHint.Unspecified,
-                updatedAllModelStateTypeDeclaration,
-                collecterSourceFile,
-                )}${collecterSourceFile.text.slice(AllModelStateTypeStatement.end)}`;
-
-            // 将新的文本写回源文件
-            fs.writeFileSync(collecterFilePath, newCollecterSourceCode);
-            } else {
-            const newCollecterSourceCode = `import { ${modelTypeName} } from 'umi';\n${collecterSourceFile.text.slice(
-                0,
-                AllModelStateTypeStatement.jsDoc[0].end + 1,
-            )}${ts
-                .createPrinter()
-                .printNode(
-                ts.EmitHint.Unspecified,
-                updatedAllModelStateTypeDeclaration,
-                collecterSourceFile,
-                )}${collecterSourceFile.text.slice(AllModelStateTypeStatement.end)}`;
-
-            // 将新的文本写回源文件
-            fs.writeFileSync(collecterFilePath, newCollecterSourceCode);
+        } catch (error) {
+            console.log(error);
         }
     });
 }
