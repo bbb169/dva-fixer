@@ -204,7 +204,7 @@ export type StateTypedDispatch = TypedDispatch<AllModelStateType>;
             
             const importFromUmi = collecterSourceFile.statements.find(
             (item: any): boolean =>
-                item?.kind === 269 && item?.moduleSpecifier.text === 'umi',
+                item?.importClause && item?.moduleSpecifier.text === 'umi',
             ) as any;
             if (importFromUmi) {
                 // 找到 importClause，这里假设 importClause 存在
@@ -232,8 +232,8 @@ export type StateTypedDispatch = TypedDispatch<AllModelStateType>;
 
                 // 将新的文本写回源文件
                 fs.writeFileSync(collecterFilePath, newCollecterSourceCode);
-                } else {
-                const newCollecterSourceCode = `import { ${modelTypeName} } from 'umi';\n${collecterSourceFile.text.slice(
+            } else {
+                const newCollecterSourceCode = `import { ${modelTypeName} } from 'umi';\n{collecterSourceFile.text.slice(
                     0,
                     AllModelStateTypeStatement.jsDoc[0].end + 1,
                 )}${ts
