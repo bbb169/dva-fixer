@@ -7,6 +7,7 @@ import path from 'path';
 // const ts = require('typescript');
 // const path = require('path');
 import { getCollecterFilePath } from './tools/getCollecterFilePath';
+import { getImportClauseAddElementStr } from './tools/getImportClauseAddElementStr';
 
 export function fixDvaType(userPath: string) {
     let modelTypeName: string = '';
@@ -57,7 +58,9 @@ export type StateTypedDispatch = TypedDispatch<AllModelStateType>;
         };
     }
 
-    let stateStatement: StateStatement = {} as StateStatement;
+    let stateStatement: ts.Statement = {} as ts.Statement;
+    let modelObjectStatement: ts.Statement = {} as ts.Statement;
+    let importDvaHelperStatement: ts.Statement = null as unknown as ts.Statement;
     let effectsNames: string[] = [];
     let modelName = '';
     console.log(sourceFile);
@@ -69,6 +72,10 @@ export type StateTypedDispatch = TypedDispatch<AllModelStateType>;
             return false;
         }
 
+        if (item?.moduleSpecifier?.text === '@/models/type') {
+            importDvaHelperStatement = item;
+        }
+
         // ======================= 寻找model变量的effects属性的值 ==========================
         const values = item?.declarationList?.declarations?.[0]?.initializer
         ?.properties as any[];
@@ -76,6 +83,7 @@ export type StateTypedDispatch = TypedDispatch<AllModelStateType>;
         item?.declarationList?.kind === 261 &&
         values?.[0]?.name?.escapedText === 'namespace'
         ) {
+            modelObjectStatement = item;
             const effects = values.find(
                 (propItem: any): boolean => propItem?.name?.escapedText === 'effects',
             );
@@ -92,8 +100,8 @@ export type StateTypedDispatch = TypedDispatch<AllModelStateType>;
         return false;
     });
 
-    if (!modelTypeName) {
-        console.warn('modelTypeName didn\'t found');
+    if (!modelTypeName || !modelObjectStatement) {
+        console.warn('modelTypeName or modelObjectStatement didn\'t found');
         return;
     }
 
@@ -147,17 +155,42 @@ export type StateTypedDispatch = TypedDispatch<AllModelStateType>;
 
     // ====================== 在state 类的结尾后一行插入我们的接口类型 ==============
     const insertPosition = stateStatement.end;
+    let newSourceCode = '';
+    let headSourceCode = '';
 
-    const newSourceCode = `${sourceFile.text.slice(
-        0,
-        insertPosition,
-    )}\n${ts
-        .createPrinter()
-        .printNode(
-        ts.EmitHint.Unspecified,
-        interfaceDeclaration,
-        sourceFile,
-        )}${sourceFile.text.slice(insertPosition)}`;
+    if (importDvaHelperStatement) {
+        headSourceCode = sourceFile.text.slice(
+            0,
+            insertPosition,
+        );
+    } else {
+        headSourceCode = `import { StatedModel } from '@/models/type';\n${sourceFile.text.slice(
+            0,
+            insertPosition,
+        )}`;
+    }
+
+    // 修改变量model的类型Model为TypedModel
+    const modelObjectStatementTypeName = (modelObjectStatement as any).declarationList.declarations[0].type;
+    if (modelObjectStatementTypeName.typeName.escapedText === 'Model') {
+        console.log('found it', modelObjectStatementTypeName);
+        newSourceCode = `${headSourceCode}\n${ts
+            .createPrinter()
+            .printNode(
+            ts.EmitHint.Unspecified,
+            interfaceDeclaration,
+            sourceFile,
+            )}${sourceFile.text.slice(insertPosition, modelObjectStatementTypeName.pos + 1)}StatedModel<'${modelName}'>${sourceFile.text.slice(modelObjectStatementTypeName.end)}`;
+    } else {
+        newSourceCode = `${headSourceCode}\n${ts
+            .createPrinter()
+            .printNode(
+            ts.EmitHint.Unspecified,
+            interfaceDeclaration,
+            sourceFile,
+            )}${sourceFile.text.slice(insertPosition)}`;
+    }
+
 
     // ========================= 修改文件，声明类型接口并导出 ===================
     fs.writeFile(path.resolve(__dirname, filePath), newSourceCode, (err: any) => {
