@@ -25,6 +25,13 @@
           "group": "navigation",
           "when": "resourceExtname == .tsx || resourceExtname == .ts"
         }
+      ],
+      "editor/context": [
+        {
+          "command": "dva-fixer.helloWorld",
+          "group": "navigation",
+          "when": "resourceExtname == .tsx || resourceExtname == .ts"
+        }
       ]
     }
   },
