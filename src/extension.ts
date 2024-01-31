@@ -20,8 +20,12 @@ export function activate(context: vscode.ExtensionContext) {
 
 		if (uri instanceof vscode.Uri) {
 			const filePath = uri.fsPath;
-			vscode.window.showInformationMessage(`dva-fixer found File Path: ${filePath}`);
-			fixDvaType(filePath);
+			
+			fixDvaType(filePath).then((res) => {
+				vscode.window.showInformationMessage(`dva-fixer ${res}`);
+			}).catch((err) => {
+				vscode.window.showInformationMessage(`dva-fixer 写入失败： ${err}`);
+			});
 		} else {
 			vscode.window.showWarningMessage('dva-fixer found No active text editor.');
 		}
