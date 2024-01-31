@@ -15,7 +15,7 @@
     "commands": [
       {
         "command": "dva-fixer.helloWorld",
-        "title": "Hello World"
+        "title": "Dva Fixer： 自动填充dva类型"
       }
     ],
     "menus": {
