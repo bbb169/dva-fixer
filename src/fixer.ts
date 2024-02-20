@@ -26,11 +26,13 @@ export function fixDvaType(userPath: string): Promise<string | void> {
 /** 在这里收集所有的models类型，以此推断全局类型 */
 export type AllModelStateType = {
 };
+
 /** 传入自己model的key值，以此来获得自己model的具体类型 */
 export type StatedModel<CurState extends keyof AllModelStateType> = NewModel<
 AllModelStateType,
 CurState
 >;
+
 /** 全局的dipatch的类型 */
 export type StateTypedDispatch = TypedDispatch<AllModelStateType>;
 `,
