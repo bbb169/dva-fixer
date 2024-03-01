@@ -1,6 +1,11 @@
 {
   "name": "dva-fixer",
   "displayName": "dva-fixer",
+  "publisher": "827088092",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/bbb169/dva-fixer"
+  },
   "description": "auto fix dva's type problem",
   "version": "0.0.1",
   "engines": {
